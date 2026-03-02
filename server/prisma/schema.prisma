@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db" 
+}
+
+// Таблица пользователя
+model User {
+  id        Int         @id @default(autoincrement())
+  name      String
+  avatar    String
+  stats     DailyStat?  // Связь 1 к 1 со статистикой
+}
+
+// Таблица статистики за день
+model DailyStat {
+  id               Int   @id @default(autoincrement())
+  userId           Int   @unique
+  user             User  @relation(fields: [userId], references: [id])
+  consumedCalories Int
+  targetCalories   Int
+  protein          Int
+  fat              Int
+  carbs            Int
+  waterCurrent     Int
+  waterTarget      Int
+  steps            Int
+  sleepMinutes     Int
+}

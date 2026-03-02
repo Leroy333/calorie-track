@@ -1,0 +1,98 @@
+import { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { addMeal } from '../../store/dashboardSlice';
+import type { AppDispatch } from '../../store';
+import { Card } from './Card';
+
+interface MealFormProps {
+  onClose: () => void;
+}
+
+export const MealForm = ({ onClose }: MealFormProps) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const [formData, setFormData] = useState({
+    name: '',
+    calories: '',
+    protein: '',
+    fat: '',
+    carbs: ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Отправляем данные в Redux
+    dispatch(addMeal({
+      name: formData.name,
+      calories: Number(formData.calories),
+      protein: Number(formData.protein),
+      fat: Number(formData.fat),
+      carbs: Number(formData.carbs),
+    }));
+
+    // Очищаем форму
+    setFormData({ name: '', calories: '', protein: '', fat: '', carbs: '' });
+    
+    // Закрываем модалку!
+    onClose();
+  };
+
+  return (
+    <Card className="flex flex-col gap-4">
+      <h3 className="text-lg font-semibold text-white">Добавить прием пищи</h3>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        
+        <input 
+          type="text" 
+          placeholder="Например: Самса из слоеного теста" 
+          className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500 w-full"
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          required
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <input 
+            type="number" 
+            placeholder="Ккал" 
+            className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500"
+            value={formData.calories}
+            onChange={(e) => setFormData({...formData, calories: e.target.value})}
+            required
+          />
+          <input 
+            type="number" 
+            placeholder="Белки (г)" 
+            className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500"
+            value={formData.protein}
+            onChange={(e) => setFormData({...formData, protein: e.target.value})}
+            required
+          />
+          <input 
+            type="number" 
+            placeholder="Жиры (г)" 
+            className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500"
+            value={formData.fat}
+            onChange={(e) => setFormData({...formData, fat: e.target.value})}
+            required
+          />
+          <input 
+            type="number" 
+            placeholder="Углеводы (г)" 
+            className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500"
+            value={formData.carbs}
+            onChange={(e) => setFormData({...formData, carbs: e.target.value})}
+            required
+          />
+        </div>
+
+        <button 
+          type="submit" 
+          className="mt-2 bg-teal-500 hover:bg-teal-400 text-slate-900 font-semibold py-2 rounded-lg transition-colors"
+        >
+          Добавить в дневник
+        </button>
+      </form>
+    </Card>
+  );
+};
