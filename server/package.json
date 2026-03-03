@@ -1,12 +1,12 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "type": "module", 
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec node --loader ts-node/esm index.ts",
-    "seed": "node --loader ts-node/esm seed.ts"
+    "dev": "tsx watch index.ts",
+    "seed": "tsx seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +22,7 @@
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }

@@ -4,29 +4,87 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db" 
+  url = "file:./dev.db"
 }
 
-// Таблица пользователя
 model User {
-  id        Int         @id @default(autoincrement())
-  name      String
-  avatar    String
-  stats     DailyStat?  // Связь 1 к 1 со статистикой
+  id             Int            @id @default(autoincrement())
+  name           String
+  avatar         String?
+  
+  // Новые физические параметры
+  age            Int?           
+  gender         String?        @default("male")
+  height         Float?         // Рост в см
+  weight         Float?         // Вес в к
+  activityLevel  Float?         @default(1.55) // Коэффициент активности
+
+  goals          Goal[]         
+  summaries      DailySummary[] 
 }
 
-// Таблица статистики за день
-model DailyStat {
-  id               Int   @id @default(autoincrement())
-  userId           Int   @unique
-  user             User  @relation(fields: [userId], references: [id])
-  consumedCalories Int
-  targetCalories   Int
-  protein          Int
-  fat              Int
-  carbs            Int
-  waterCurrent     Int
-  waterTarget      Int
-  steps            Int
-  sleepMinutes     Int
+// 1) Таблица продуктов (База знаний)
+model Product {
+  id       Int    @id @default(autoincrement())
+  name     String
+  category String @default("Базовое") // Завтрак, Обед, Перекус, Базовое
+  unit     String @default("100г")    // "100г" или "1 шт"
+  calories Float
+  protein  Float
+  fat      Float
+  carbs    Float
+}
+
+// 2) Таблица приемов пищи (конкретная еда, съеденная в конкретный день)
+model MealRecord {
+  id             Int          @id @default(autoincrement())
+  name           String       // Например, "Завтрак" или название продукта
+  calories       Float
+  protein        Float
+  fat            Float
+  carbs          Float
+  consumedAt     DateTime     @default(now()) // Дата и время приема
+  
+  // Привязка к конкретному дню
+  dailySummaryId Int
+  dailySummary   DailySummary @relation(fields: [dailySummaryId], references: [id], onDelete: Cascade)
+}
+
+// 3) Таблица по дням (агрегированная статистика и отклонения)
+model DailySummary {
+  id               Int          @id @default(autoincrement())
+  date             String       // Строка в формате "YYYY-MM-DD" для удобного поиска
+  
+  // Фактически набранное за день
+  totalCalories    Float        @default(0)
+  totalProtein     Float        @default(0)
+  totalFat         Float        @default(0)
+  totalCarbs       Float        @default(0)
+  
+  // Отклонения от цели (плюс - перебор, минус - недобор)
+  deviationCalories Float       @default(0)
+  deviationProtein  Float       @default(0)
+  deviationFat      Float       @default(0)
+  deviationCarbs    Float       @default(0)
+  
+  // Привязка к пользователю и списку приемов пищи
+  userId           Int
+  user             User         @relation(fields: [userId], references: [id])
+  meals            MealRecord[] // Все приемы пищи за этот день
+
+  @@unique([userId, date]) // Защита: у одного юзера может быть только одна сводка на конкретную дату
+}
+
+// 4) Таблица по целям (настройки для похудения/набора)
+model Goal {
+  id             Int     @id @default(autoincrement())
+  name           String  // Например, "Сушка", "Поддержание", "Масса"
+  targetCalories Float
+  targetProtein  Float
+  targetFat      Float
+  targetCarbs    Float
+  isActive       Boolean @default(false) // Активна ли эта цель сейчас
+  
+  userId         Int
+  user           User    @relation(fields: [userId], references: [id])
 }

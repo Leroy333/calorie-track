@@ -1,215 +1,214 @@
 import { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { Flame, Droplets, Footprints, Moon } from 'lucide-react';
-import { 
-  BarChart, Bar, ResponsiveContainer, Cell,
-  PieChart, Pie,
-  LineChart, Line
-} from 'recharts';
-
-import { Header } from '../components/layout/Header';
-import { Card } from '../components/ui/Card';
-import { MainChart } from '../components/charts/MainChart';
-import { fetchUserData } from '../store/dashboardSlice';
-import type { RootState, AppDispatch } from '../store'; 
-
-// --- Моковые данные для истории (пока нет API для графиков за неделю) ---
-const weekData = [
-  { day: 'Пн', val: 1800 }, { day: 'Вт', val: 2100 }, { day: 'Ср', val: 1950 },
-  { day: 'Чт', val: 2300 }, { day: 'Пт', val: 2000 }, { day: 'Сб', val: 2400 }, { day: 'Вс', val: 1700 }
-];
-
-const weightHistory = [
-  { day: '1', val: 76.5 }, { day: '5', val: 76.2 }, { day: '10', val: 75.8 },
-  { day: '15', val: 75.5 }, { day: '20', val: 75.2 }, { day: '25', val: 74.8 }
-];
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchUserData, switchGoal } from '../store/dashboardSlice';
+import type { AppDispatch, RootState } from '../store';
+import { useState } from 'react';
+import { CalorieEditModal } from '../components/ui/CalorieEditModal';
+import { ChevronDown, Trash2 } from 'lucide-react'; // Добавили Trash2
+import { removeMeal } from '../store/dashboardSlice'; // Добавили removeMeal
 
 export const Dashboard = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { stats, status } = useSelector((state: RootState) => state.dashboard);
+  const [isCalorieModalOpen, setIsCalorieModalOpen] = useState(false);
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
+  const { user, target, summary, meals, status } = useSelector((state: RootState) => state.dashboard);
 
-  // Запрашиваем данные при монтировании компонента
+// Функция для сопоставления полного имени из БД с коротким списком
+  const getGoalValue = (name?: string) => {
+    if (!name) return 'Рекомпозиция';
+    if (name.toLowerCase().includes('сушка')) return 'Сушка';
+    if (name.toLowerCase().includes('набор')) return 'Набор массы';
+    return 'Рекомпозиция';
+  };
+
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchUserData());
-    }
-  }, [status, dispatch]);
+    dispatch(fetchUserData());
+  }, [dispatch]);
 
-  // Экран загрузки
-  if (status === 'loading' || status === 'idle') {
+  if (status === 'idle' || status === 'loading') {
     return (
-      <div className="p-8 h-full flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center text-slate-400">
-          Загрузка данных с сервера...
+      <div className="p-8 w-full max-w-6xl mx-auto flex items-center justify-center min-h-[50vh]">
+        <div className="text-teal-500 font-medium animate-pulse text-xl">
+          Загрузка профиля...
         </div>
       </div>
     );
   }
-
-  // Экран ошибки
-  if (status === 'failed') {
-    return (
-      <div className="p-8 h-full flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center text-red-400">
-          Ошибка загрузки данных. Убедись, что бэкенд на порту 5000 запущен.
-        </div>
-      </div>
-    );
-  }
-
-  // Динамический расчет макросов из БД
-  const macroData = [
-    { name: 'Углеводы', value: stats.carbs, color: '#3B82F6' }, // blue-500
-    { name: 'Белки', value: stats.protein, color: '#2DD4BF' },  // teal-400
-    { name: 'Жиры', value: stats.fat, color: '#FB923C' },     // orange-400
-  ];
-
-  const totalMacros = stats.carbs + stats.protein + stats.fat;
-  const getPercent = (val: number) => totalMacros > 0 ? Math.round((val / totalMacros) * 100) : 0;
-
-  // Форматирование сна из минут в часы и минуты
-  const sleepHours = Math.floor(stats.sleepMinutes / 60);
-  const sleepMins = stats.sleepMinutes % 60;
 
   return (
-    <div className="p-8 h-full flex flex-col max-w-[1600px] mx-auto overflow-y-auto">
-      <Header />
-
-      {/* Основная сетка */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 flex-1">
-        
-        {/* ЛЕВАЯ КОЛОНКА (8 колонок) */}
-        <div className="xl:col-span-8 flex flex-col gap-6">
+    <div className="p-8 w-full max-w-6xl mx-auto flex flex-col gap-8">
+      
+      {/* Шапка */}
+      <header className="mb-2">
+        <h1 className="text-3xl font-bold text-white mb-2">Привет, {user.name || 'Спортсмен'}! 👋</h1>
+        <div className="text-slate-400 flex items-center gap-2">
+          Твоя цель: 
           
-          {/* Верхние карточки сводки */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Карточка Калорий */}
-            <Card className="flex flex-col justify-between col-span-1 md:col-span-2">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-slate-400 text-sm font-medium mb-1">Потреблено сегодня</h3>
-                  <div className="text-3xl font-bold text-white">
-                    {stats.consumedCalories} <span className="text-sm text-slate-400 font-normal">/ {stats.targetCalories} ккал</span>
-                  </div>
-                </div>
-                <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400">
-                  <Flame size={24} />
-                </div>
-              </div>
-              <div className="w-full bg-slate-800 rounded-full h-2.5">
+          {/* Кастомный Dropdown */}
+          <div className="relative">
+            {/* Кнопка-триггер */}
+            <button 
+              onClick={() => setIsGoalMenuOpen(!isGoalMenuOpen)}
+              className="flex items-center gap-1.5 text-teal-400 font-semibold px-3 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg cursor-pointer transition-colors outline-none"
+            >
+              {getGoalValue(target.name)}
+              <ChevronDown size={14} className={`transition-transform duration-200 ${isGoalMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Выпадающее меню */}
+            {isGoalMenuOpen && (
+              <>
+                {/* Невидимый слой на весь экран, чтобы закрывать меню по клику мимо него */}
                 <div 
-                  className="bg-teal-400 h-2.5 rounded-full transition-all duration-500" 
-                  style={{ width: `${Math.min((stats.consumedCalories / stats.targetCalories) * 100, 100)}%` }}
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsGoalMenuOpen(false)}
                 ></div>
-              </div>
-            </Card>
 
-            {/* Карточка Воды */}
-            <Card className="flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-slate-400 text-sm font-medium mb-1">Вода</h3>
-                  <div className="text-2xl font-bold text-white">
-                    {stats.waterCurrent} <span className="text-sm text-slate-400 font-normal">/ {stats.waterTarget} стаканов</span>
-                  </div>
+                {/* Сама панель с выбором */}
+                <div className="absolute top-full left-0 mt-2 w-48 bg-[#1E2128] border border-slate-800 rounded-xl shadow-xl shadow-black/50 z-50 overflow-hidden py-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {['Сушка', 'Рекомпозиция', 'Набор массы'].map((goal) => {
+                    const isActive = getGoalValue(target.name) === goal;
+                    return (
+                      <button
+                        key={goal}
+                        onClick={() => {
+                          if (!isActive) dispatch(switchGoal(goal));
+                          setIsGoalMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                          isActive 
+                            ? 'text-teal-400 bg-teal-500/5 font-medium' 
+                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        }`}
+                      >
+                        {goal}
+                        {/* Маленькая точка для индикации активного пункта */}
+                        {isActive && <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                  <Droplets size={24} />
-                </div>
-              </div>
-            </Card>
+              </>
+            )}
           </div>
+        </div>
+      </header>
 
-          {/* Главный график */}
-          <Card className="flex-1 min-h-[350px]">
-            <MainChart />
-          </Card>
+      {/* Карточки КБЖУ */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Калории */}
+        <div onClick={() => setIsCalorieModalOpen(true)}
+          className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/50 transition-all group relative">
+          <div className="absolute top-4 right-4 text-xs font-medium text-teal-500/0 group-hover:text-teal-500/80 transition-colors">
+            Изменить
+          </div>
+          <h3 className="text-slate-400 text-sm font-medium mb-4">Калории</h3>
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-3xl font-bold text-white">{summary.totalCalories}</span>
+            <span className="text-slate-500 mb-1">/ {target.calories} ккал</span>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2">
+            <div 
+              className="bg-teal-500 h-2 rounded-full transition-all duration-500" 
+              style={{ width: `${Math.min((summary.totalCalories / target.calories) * 100, 100)}%` }}
+            ></div>
+          </div>
         </div>
 
-        {/* ПРАВАЯ КОЛОНКА (4 колонки) */}
-        <div className="xl:col-span-4 flex flex-col gap-6">
-          
-          {/* Сводка по макронутриентам */}
-          <Card className="flex flex-col items-center p-6">
-            <h3 className="text-slate-300 font-medium mb-6 w-full text-left">Макронутриенты</h3>
-            <div className="h-40 w-full mb-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={macroData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {macroData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            {/* Легенда БЖУ с реальными данными */}
-            <div className="flex flex-col w-full text-sm text-slate-300 gap-3">
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div> Углеводы
-                </span> 
-                <span className="font-medium">{stats.carbs}г <span className="text-slate-500 text-xs">({getPercent(stats.carbs)}%)</span></span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-teal-400"></div> Белки
-                </span> 
-                <span className="font-medium">{stats.protein}г <span className="text-slate-500 text-xs">({getPercent(stats.protein)}%)</span></span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-orange-400"></div> Жиры
-                </span> 
-                <span className="font-medium">{stats.fat}г <span className="text-slate-500 text-xs">({getPercent(stats.fat)}%)</span></span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Карточки активности и сна */}
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="flex flex-col items-center text-center p-4">
-              <Footprints className="text-teal-400 mb-2" size={24} />
-              <span className="text-2xl font-bold text-white mb-1">{stats.steps}</span>
-              <span className="text-xs text-slate-400">Шагов</span>
-            </Card>
-            
-            <Card className="flex flex-col items-center text-center p-4">
-              <Moon className="text-indigo-400 mb-2" size={24} />
-              <span className="text-2xl font-bold text-white mb-1">
-                {sleepHours}<span className="text-sm">ч</span> {sleepMins > 0 ? `${sleepMins}м` : ''}
-              </span>
-              <span className="text-xs text-slate-400">Сон</span>
-            </Card>
+        {/* Белки */}
+        <div className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-slate-400 text-sm font-medium mb-4">Белки</h3>
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-3xl font-bold text-blue-400">{summary.totalProtein}</span>
+            <span className="text-slate-500 mb-1">/ {target.protein} г</span>
           </div>
+          <div className="w-full bg-slate-800 rounded-full h-2">
+            <div 
+              className="bg-blue-400 h-2 rounded-full transition-all duration-500" 
+              style={{ width: `${Math.min((summary.totalProtein / target.protein) * 100, 100)}%` }}
+            ></div>
+          </div>
+        </div>
 
-          {/* История веса (мини-график) */}
-          <Card className="flex flex-col p-4 flex-1 min-h-[150px]">
-            <h4 className="text-xs text-slate-300 font-medium mb-4">История веса</h4>
-            <div className="flex-1 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weightHistory}>
-                  <Line type="monotone" dataKey="val" stroke="#3B82F6" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
+        {/* Жиры */}
+        <div className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-slate-400 text-sm font-medium mb-4">Жиры</h3>
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-3xl font-bold text-yellow-400">{summary.totalFat}</span>
+            <span className="text-slate-500 mb-1">/ {target.fat} г</span>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2">
+            <div 
+              className="bg-yellow-400 h-2 rounded-full transition-all duration-500" 
+              style={{ width: `${Math.min((summary.totalFat / target.fat) * 100, 100)}%` }}
+            ></div>
+          </div>
+        </div>
 
+        {/* Углеводы */}
+        <div className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-slate-400 text-sm font-medium mb-4">Углеводы</h3>
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-3xl font-bold text-purple-400">{summary.totalCarbs}</span>
+            <span className="text-slate-500 mb-1">/ {target.carbs} г</span>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2">
+            <div 
+              className="bg-purple-400 h-2 rounded-full transition-all duration-500" 
+              style={{ width: `${Math.min((summary.totalCarbs / target.carbs) * 100, 100)}%` }}
+            ></div>
+          </div>
         </div>
       </div>
+
+      {/* История приемов пищи за сегодня */}
+      <div className="bg-[#1E2128] rounded-2xl border border-slate-800 p-6">
+        <h3 className="text-lg font-bold text-white mb-4">Съедено за сегодня</h3>
+        
+        {meals.length === 0 ? (
+          <p className="text-slate-500 text-center py-4">Ты пока ничего не добавил. Самое время перекусить!</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {meals.map((meal) => (
+              <div 
+                key={meal.id} 
+                className="flex items-center justify-between bg-[#15171C] p-4 rounded-xl border border-transparent hover:border-slate-800 transition-colors group"
+              >
+                <div>
+                  <h4 className="text-white font-medium">{meal.name}</h4>
+                  <div className="flex gap-4 text-sm mt-1.5">
+                    {/* Выводим БЖУ конкретного продукта (meal), а не итоги дня */}
+                    <span className="text-blue-400">Б: {Math.round(meal.protein)}г.</span>
+                    <span className="text-yellow-400">Ж: {Math.round(meal.fat)}г.</span>
+                    <span className="text-purple-400">У: {Math.round(meal.carbs)}г.</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="text-teal-400 font-bold text-xl text-right">
+                    {/* Выводим только калории этого продукта */}
+                    {Math.round(meal.calories)} <span className="text-sm text-slate-500 font-normal">ккал</span>
+                  </div>
+                  
+                  {/* Кнопка удаления */}
+                  <button 
+                    onClick={() => dispatch(removeMeal(meal.id))}
+                    className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1"
+                    title="Удалить"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Модальное окно редактирования калорий */}
+      {isCalorieModalOpen && (
+        <CalorieEditModal onClose={() => setIsCalorieModalOpen(false)} />
+      )}   
     </div>
   );
 };

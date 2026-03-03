@@ -1,18 +1,25 @@
-import { Provider } from 'react-redux';
-import { store } from './store';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './pages/Dashboard';
+import { FoodDiary } from './pages/FoodDiary';
 
-export default function App() {
+// Здесь НЕТ импорта App из './App' !
+
+export const App = () => {
   return (
-    <Provider store={store}>
-      <div className="flex bg-[#15171C] min-h-screen font-sans">
+    <Router>
+      <div className="flex h-screen bg-[#0F1115]">
         <Sidebar />
-        {/* Добавили ml-64 сюда 👇 */}
-        <div className="flex-1 ml-64">
-          <Dashboard />
-        </div>
+        <main className="flex-1 ml-64 overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/diary" element={<FoodDiary />} />
+          </Routes>
+        </main>
       </div>
-    </Provider>
+    </Router>
   );
-}
+};
+
+// Обязательно добавляем экспорт по умолчанию в самом конце:
+export default App;
