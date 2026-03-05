@@ -35,17 +35,17 @@ model Product {
   carbs    Float
 }
 
-// 2) Таблица приемов пищи (конкретная еда, съеденная в конкретный день)
+// 2) Таблица приемов пищи
 model MealRecord {
   id             Int          @id @default(autoincrement())
-  name           String       // Например, "Завтрак" или название продукта
+  name           String       
+  type           String       @default("Перекус") // <--- ДОБАВИЛИ ЭТУ СТРОКУ
   calories       Float
   protein        Float
   fat            Float
   carbs          Float
-  consumedAt     DateTime     @default(now()) // Дата и время приема
+  consumedAt     DateTime     @default(now()) 
   
-  // Привязка к конкретному дню
   dailySummaryId Int
   dailySummary   DailySummary @relation(fields: [dailySummaryId], references: [id], onDelete: Cascade)
 }

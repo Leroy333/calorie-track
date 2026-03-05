@@ -8,14 +8,16 @@ body {
   @apply bg-background text-white antialiased;
 }
 
-/* Убираем стрелочки у всех input type="number" в Chrome, Safari, Edge, Opera */
+/* Убираем стрелочки у всех input type="number" */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
+  appearance: none; /* <-- Добавили стандартное правило */
   margin: 0;
 }
 
 /* Убираем стрелочки в Firefox */
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield; /* <-- И сюда тоже */
 }

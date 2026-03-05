@@ -42,9 +42,9 @@ export const Sidebar = () => {
   return (
     <>
       <aside className="w-64 bg-[#1E2128] h-screen text-slate-400 p-4 flex flex-col fixed left-0 top-0 z-40 border-r border-slate-800">
-        <div className="flex items-center gap-2 text-white font-bold text-xl mb-10 px-2">
+        <Link to="/" className="flex items-center gap-2 text-white font-bold text-xl mb-10 px-2 hover:opacity-80 transition-opacity">
           <Flame className="text-teal-500" /> CalorieTrack
-        </div>
+        </Link>
         <nav className="flex flex-col gap-2">
           {menu.map((item, idx) => {
             // Проверяем, совпадает ли путь элемента с текущим адресом в браузере

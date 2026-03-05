@@ -1,14 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// Интерфейсы для наших новых данных
 export interface Meal {
   id: number;
   name: string;
+  type: string; 
   calories: number;
   protein: number;
   fat: number;
   carbs: number;
-  consumedAt: string;
 }
 
 export interface Product {
@@ -38,6 +37,7 @@ interface DashboardState {
   products: Product[];
   meals: Meal[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  history: any[];
 }
 
 const initialState: DashboardState = {
@@ -50,6 +50,7 @@ const initialState: DashboardState = {
   products: [],
   meals: [],
   status: 'idle',
+  history: []
 };
 
 // Запрашиваем данные при загрузке
@@ -73,17 +74,22 @@ export const fetchProducts = createAsyncThunk(
   }
 );
 
-// Отправляем новый прием пищи
+// Добавление приема пищи
 export const addMeal = createAsyncThunk(
   'dashboard/addMeal',
-  async (mealData: { name: string; calories: number; protein: number; fat: number; carbs: number }) => {
-    const response = await fetch('http://localhost:5001/api/meals', { // 👈 и здесь
+  // Убедись, что здесь есть targetDate?: string
+  async (meal: { name: string; type: string; calories: number; protein: number; fat: number; carbs: number; targetDate?: string }, { dispatch }) => {
+    const response = await fetch('http://localhost:5001/api/meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mealData),
+      body: JSON.stringify(meal), // Здесь targetDate улетает на бэкенд
     });
-    if (!response.ok) throw new Error('Ошибка при добавлении еды');
-    return response.json(); 
+    if (!response.ok) throw new Error('Ошибка сервера');
+    
+    // Перезапрашиваем историю, чтобы карточка обновилась
+    dispatch(fetchHistory());
+    
+    return response.json();
   }
 );
 
@@ -207,7 +213,17 @@ const dashboardSlice = createSlice({
           };
           state.meals = [];
         }
-      });
+      })
+      .addCase(editProduct.fulfilled, (state, action) => {
+        // Находим обновленный продукт в списке и заменяем его
+        const index = state.products.findIndex(p => p.id === action.payload.id);
+        if (index !== -1) {
+          state.products[index] = action.payload;
+        }
+      })
+      .addCase(fetchHistory.fulfilled, (state, action) => {
+        state.history = action.payload;
+      })
       
   },
 });
@@ -226,6 +242,17 @@ export const updateTargetCalories = createAsyncThunk(
   }
 );
 
+
+
+export const fetchHistory = createAsyncThunk(
+  'dashboard/fetchHistory',
+  async () => {
+    const response = await fetch('http://localhost:5001/api/history');
+    if (!response.ok) throw new Error('Ошибка сервера при загрузке истории');
+    return response.json();
+  }
+);
+
 // Переключение цели
 export const switchGoal = createAsyncThunk(
   'dashboard/switchGoal',
@@ -240,14 +267,38 @@ export const switchGoal = createAsyncThunk(
   }
 );
 
+// Удаление приема пищи
 export const removeMeal = createAsyncThunk(
   'dashboard/removeMeal',
-  async (mealId: number) => {
+  // Добавили { dispatch } вторым аргументом
+  async (mealId: number, { dispatch }) => { 
     const response = await fetch(`http://localhost:5001/api/meals/${mealId}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Ошибка при удалении еды');
+    
+    // Обновляем Календарь, чтобы еда сразу исчезла из списка!
+    dispatch(fetchHistory()); 
+    
     return response.json(); 
+  }
+);
+
+// Редактирование приема пищи (в истории)
+export const editMealRecord = createAsyncThunk(
+  'dashboard/editMealRecord',
+  async (meal: any, { dispatch }) => {
+    const response = await fetch(`http://localhost:5001/api/meals/${meal.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(meal),
+    });
+    if (!response.ok) throw new Error('Ошибка сервера при редактировании');
+    
+    // После успешного сохранения обновляем все данные на экране
+    dispatch(fetchHistory());
+    dispatch(fetchUserData());
+    return response.json();
   }
 );
 
@@ -262,6 +313,20 @@ export const updateSettings = createAsyncThunk(
     });
     if (!response.ok) throw new Error('Ошибка при сохранении настроек');
     return response.json(); 
+  }
+);
+
+// Редактирование продукта
+export const editProduct = createAsyncThunk(
+  'dashboard/editProduct',
+  async (product: any) => {
+    const response = await fetch(`http://localhost:5001/api/products/${product.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product),
+    });
+    if (!response.ok) throw new Error('Ошибка сервера');
+    return response.json();
   }
 );
 

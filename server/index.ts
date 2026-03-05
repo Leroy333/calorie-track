@@ -39,54 +39,61 @@ app.get('/api/user/stats', async (req, res) => {
   }
 });
 
-// 2. POST: Добавление нового приема пищи
+// POST: Добавление приема пищи (с поддержкой прошлых дней)
 app.post('/api/meals', async (req, res) => {
-  const { name, calories, protein, fat, carbs } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const { name, type, calories, protein, fat, carbs, targetDate } = req.body;
   
+  // Железобетонно чистим дату (если вдруг прилетел формат с временем)
+  const cleanTargetDate = targetDate ? targetDate.split('T')[0] : null;
+  const dateToUse = cleanTargetDate || new Date().toISOString().split('T')[0];
+
   try {
     const user = await prisma.user.findFirst();
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    // Ищем сводку за сегодня. Если её нет - создаем.
     let summary = await prisma.dailySummary.findFirst({
-      where: { userId: user.id, date: today }
+      where: { userId: user.id, date: dateToUse }
     });
 
     if (!summary) {
       summary = await prisma.dailySummary.create({
-        data: { userId: user.id, date: today }
+        data: { userId: user.id, date: dateToUse }
       });
     }
 
-    // Создаем запись о приеме пищи
     await prisma.mealRecord.create({
       data: {
         name,
-        calories: Number(calories),
-        protein: Number(protein),
-        fat: Number(fat),
-        carbs: Number(carbs),
+        type: type || 'Перекус',
+        calories,
+        protein,
+        fat,
+        carbs,
         dailySummaryId: summary.id
       }
     });
 
-    // Обновляем общую сумму за день
-    const updatedSummary = await prisma.dailySummary.update({
+    await prisma.dailySummary.update({
       where: { id: summary.id },
       data: {
-        totalCalories: { increment: Number(calories) },
-        totalProtein: { increment: Number(protein) },
-        totalFat: { increment: Number(fat) },
-        totalCarbs: { increment: Number(carbs) },
-      },
-      include: { meals: true } // Возвращаем обновленную сводку с массивом еды
+        totalCalories: { increment: calories },
+        totalProtein: { increment: protein },
+        totalFat: { increment: fat },
+        totalCarbs: { increment: carbs },
+      }
     });
 
-    res.json(updatedSummary);
+    const updatedUser = await prisma.user.findFirst({
+      include: {
+        goals: { where: { isActive: true } },
+        summaries: { where: { date: new Date().toISOString().split('T')[0] }, include: { meals: true } }
+      },
+    });
+
+    res.json(updatedUser);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Ошибка сервера при добавлении еды' });
+    res.status(500).json({ error: 'Ошибка при добавлении еды' });
   }
 });
 
@@ -238,6 +245,23 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// PUT: Редактирование продукта в базе знаний
+app.put('/api/products/:id', async (req, res) => {
+  const productId = parseInt(req.params.id);
+  const { name, calories, protein, fat, carbs } = req.body;
+
+  try {
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: { name, calories, protein, fat, carbs }
+    });
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Ошибка сервера при обновлении продукта' });
+  }
+});
+
 // DELETE: Удаление приема пищи из дневника
 // DELETE: Удаление приема пищи из дневника
 app.delete('/api/meals/:id', async (req, res) => {
@@ -292,6 +316,73 @@ app.delete('/api/meals/:id', async (req, res) => {
     res.status(500).json({ error: 'Ошибка при удалении приема пищи' });
   }
 });
+
+// GET: Получение истории питания за все дни (для Календаря)
+app.get('/api/history', async (req, res) => {
+  try {
+    // Берем первого пользователя (так как авторизации пока нет)
+    const user = await prisma.user.findFirst();
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    // Ищем все записи по дням
+    const history = await prisma.dailySummary.findMany({
+      where: { userId: user.id },
+      orderBy: { date: 'desc' }, // Сортируем: от самых свежих к старым
+      include: { meals: true }   // Обязательно подтягиваем список съеденного
+    });
+
+    res.json(history);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Ошибка сервера при получении истории' });
+  }
+});
+
+// PUT: Редактирование съеденного приема пищи (в том числе в прошлом)
+app.put('/api/meals/:id', async (req, res) => {
+  const mealId = parseInt(req.params.id);
+  const { name, type, calories, protein, fat, carbs } = req.body;
+
+  try {
+    const meal = await prisma.mealRecord.findUnique({ where: { id: mealId } });
+    if (!meal) return res.status(404).json({ error: 'Прием пищи не найден' });
+
+    // 1. Обновляем саму запись
+    await prisma.mealRecord.update({
+      where: { id: mealId },
+      data: { name, type, calories, protein, fat, carbs }
+    });
+
+    // 2. Пересчитываем итоги за ТОТ день, к которому привязана еда
+    const remainingMeals = await prisma.mealRecord.findMany({
+      where: { dailySummaryId: meal.dailySummaryId }
+    });
+
+    const newTotals = remainingMeals.reduce((acc, m) => ({
+      calories: acc.calories + m.calories,
+      protein: acc.protein + m.protein,
+      fat: acc.fat + m.fat,
+      carbs: acc.carbs + m.carbs,
+    }), { calories: 0, protein: 0, fat: 0, carbs: 0 });
+
+    // 3. Записываем новые итоги в сводку дня
+    await prisma.dailySummary.update({
+      where: { id: meal.dailySummaryId },
+      data: {
+        totalCalories: newTotals.calories,
+        totalProtein: newTotals.protein,
+        totalFat: newTotals.fat,
+        totalCarbs: newTotals.carbs,
+      }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Ошибка при редактировании приема пищи' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Бэкенд запущен на http://localhost:${PORT}`);
