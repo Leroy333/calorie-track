@@ -1,4 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
 
@@ -18,30 +24,30 @@ async function main() {
     },
   });
 
-  // 2. Очищаем старые продукты и создаем твою реальную базу
+  // 2. Очищаем старые продукты и загружаем базу из CSV
   await prisma.product.deleteMany();
   
+  const csvPath = path.join(__dirname, 'products.csv');
+  const csvData = fs.readFileSync(csvPath, 'utf-8');
+  
+  // Разбиваем на строки, пропускаем заголовок и отсеиваем пустые строки
+  const rows = csvData.split('\n').slice(1).filter(row => row.trim() !== '');
+  
+  const products = rows.map(row => {
+    const [name, category, unit, calories, protein, fat, carbs] = row.split(',');
+    return {
+      name: name.trim(),
+      category: category.trim(),
+      unit: unit.trim(),
+      calories: parseFloat(calories),
+      protein: parseFloat(protein),
+      fat: parseFloat(fat),
+      carbs: parseFloat(carbs),
+    };
+  });
+
   await prisma.product.createMany({
-    data: [
-      // ЗАВТРАК
-      { name: 'Яйцо куриное С1', category: 'Завтрак', unit: '1 шт', calories: 78, protein: 7, fat: 5.5, carbs: 0.5 },
-      { name: 'Карпаччо (нарезка)', category: 'Завтрак', unit: '1 шт', calories: 17, protein: 2, fat: 1, carbs: 0 },
-      { name: 'Сыр полутвердый', category: 'Завтрак', unit: '100г', calories: 350, protein: 26, fat: 26, carbs: 0 },
-      // Банан 250г (если взвешивал с кожурой, то съедобной части там ~150г, но я посчитал на чистые 250г мякоти)
-      { name: 'Банан (крупный)', category: 'Завтрак', unit: '1 шт (250г)', calories: 222, protein: 2.5, fat: 0.8, carbs: 57 },
-
-      // ОБЕД
-      { name: 'Куриное филе (в духовке)', category: 'Обед', unit: '100г', calories: 165, protein: 31, fat: 3.6, carbs: 0 },
-      { name: 'Картофель (в духовке)', category: 'Обед', unit: '100г', calories: 93, protein: 2.5, fat: 0.2, carbs: 21 },
-
-      // ПЕРЕКУС
-      { name: 'Карпаччо филе', category: 'Перекус', unit: '100г', calories: 130, protein: 22, fat: 5, carbs: 0 },
-      { name: 'Мороженое Твист', category: 'Перекус', unit: '1 шт', calories: 187, protein: 2.6, fat: 8.25, carbs: 25 },
-
-      // БАЗОВОЕ
-      { name: 'Конфета (любимая)', category: 'Базовое', unit: '1 шт (18г)', calories: 70, protein: 0.7, fat: 5, carbs: 13 },
-      { name: 'Кусок хлеба', category: 'Базовое', unit: '1 шт', calories: 72, protein: 2.5, fat: 0.8, carbs: 13 },
-    ],
+    data: products,
   });
 
   // 3. Создаем цели (одна активная для похудения/рекомпозиции, другая для массы)

@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, addMeal, editProduct } from '../store/dashboardSlice';
 import type { AppDispatch, RootState } from '../store';
-import { Plus, X, Edit2 } from 'lucide-react';
+import { Plus, X, Edit2, Search } from 'lucide-react';
 
 export const FoodDiary = () => {
   const dispatch = useDispatch<AppDispatch>();
   const products = useSelector((state: RootState) => state.dashboard.products);
+  
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Стейт для добавления продукта
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -23,7 +25,15 @@ export const FoodDiary = () => {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  const groupedProducts = products.reduce((acc, product) => {
+  const escapedQuery = searchQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const searchRegex = new RegExp(`(^|[^а-яА-ЯёЁa-zA-Z0-9])` + escapedQuery, 'i');
+
+  const filteredProducts = products.filter(p => {
+    if (!searchQuery.trim()) return true;
+    return searchRegex.test(p.name) || searchRegex.test(p.category);
+  });
+
+  const groupedProducts = filteredProducts.reduce((acc, product) => {
     if (!acc[product.category]) acc[product.category] = [];
     acc[product.category].push(product);
     return acc;
@@ -82,6 +92,18 @@ export const FoodDiary = () => {
         <h1 className="text-3xl font-bold text-white mb-2">Дневник Питания 🥗</h1>
         <p className="text-slate-400">Твоя база продуктов. Выбери еду или отредактируй состав.</p>
       </header>
+
+      {/* Поиск */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+        <input
+          type="text"
+          placeholder="Поиск продуктов..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-[#1E2128] border border-slate-800 text-white rounded-2xl pl-12 pr-4 py-3 outline-none focus:border-teal-500 transition-colors"
+        />
+      </div>
 
       <div className="flex flex-col gap-8">
         {Object.keys(groupedProducts).map(category => (
