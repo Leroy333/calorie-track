@@ -74,32 +74,45 @@ async function main() {
     ]
   });
 
-  // 4. Создаем день (сводку) и привязываем к нему приемы пищи
-  const today = new Date().toISOString().split('T')[0]; // Получаем дату в формате YYYY-MM-DD
-  
-  const dailySummary = await prisma.dailySummary.create({
-    data: {
-      date: today,
-      userId: user.id,
-      totalCalories: 455,
-      totalProtein: 23,
-      totalFat: 28,
-      totalCarbs: 26,
-      // Пример отклонений (если цель 2000 ккал, а съели 455, то отклонение -1545)
-      deviationCalories: -1545, 
-      deviationProtein: -127,
-      deviationFat: -37,
-      deviationCarbs: -174,
-      meals: {
-        create: [
-          { name: 'Яйцо куриное (вареное) 100г', calories: 155, protein: 13, fat: 11, carbs: 1 },
-          { name: 'Самса с курицей (слоеное тесто) 100г', calories: 300, protein: 10, fat: 17, carbs: 25 },
-        ]
-      }
-    },
-  });
+  // 4. Заполняем данные за весь май 2026 года
+  const mockMayData = [
+    { day: '01', calories: 2100 }, { day: '02', calories: 2150 }, { day: '03', calories: 2200 },
+    { day: '04', calories: 2050 }, { day: '05', calories: 1950 }, { day: '06', calories: 1900 },
+    { day: '07', calories: 2100 }, { day: '08', calories: 2300 }, { day: '09', calories: 2400 },
+    { day: '10', calories: 2100 }, { day: '11', calories: 2000 }, { day: '12', calories: 1950 },
+    { day: '13', calories: 1900 }, { day: '14', calories: 1850 }, { day: '15', calories: 2100 },
+    { day: '16', calories: 2200 }, { day: '17', calories: 2150 }, { day: '18', calories: 2300 },
+    { day: '19', calories: 2400 }, { day: '20', calories: 2350 }, { day: '21', calories: 2200 },
+    { day: '22', calories: 2100 }, { day: '23', calories: 2050 }, { day: '24', calories: 1950 },
+    { day: '25', calories: 1900 }, { day: '26', calories: 1850 }, { day: '27', calories: 2000 },
+    { day: '28', calories: 2100 }, { day: '29', calories: 2200 }, { day: '30', calories: 2150 },
+    { day: '31', calories: 2000 } 
+  ];
 
-  console.log('✅ База данных успешно пересобрана и заполнена тестовыми данными!');
+  for (const data of mockMayData) {
+    const date = `2026-05-${data.day}`;
+    await prisma.dailySummary.create({
+      data: {
+        date: date,
+        userId: user.id,
+        totalCalories: data.calories,
+        totalProtein: Math.round(data.calories * 0.3 / 4), // примерно 30% белка
+        totalFat: Math.round(data.calories * 0.3 / 9),     // примерно 30% жира
+        totalCarbs: Math.round(data.calories * 0.4 / 4),   // примерно 40% углеводов
+        deviationCalories: data.calories - 2000, 
+        deviationProtein: 0,
+        deviationFat: 0,
+        deviationCarbs: 0,
+        meals: {
+          create: [
+            { name: 'Тестовый прием пищи', type: 'Обед', calories: data.calories, protein: Math.round(data.calories * 0.3 / 4), fat: Math.round(data.calories * 0.3 / 9), carbs: Math.round(data.calories * 0.4 / 4) }
+          ]
+        }
+      },
+    });
+  }
+
+  console.log('✅ База данных успешно пересобрана и заполнена тестовыми данными (включая май 2026)!');
 }
 
 main()

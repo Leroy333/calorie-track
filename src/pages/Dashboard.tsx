@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchUserData, switchGoal } from '../store/dashboardSlice';
+import { fetchUserData, switchGoal, fetchHistory } from '../store/dashboardSlice';
 import type { AppDispatch, RootState } from '../store';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CalorieEditModal } from '../components/ui/CalorieEditModal';
+import { MainChart } from '../components/charts/MainChart';
+import { MacroDonutChart } from '../components/charts/MacroDonutChart';
 import { ChevronDown, Trash2 } from 'lucide-react'; // Добавили Trash2
 import { removeMeal } from '../store/dashboardSlice'; // Добавили removeMeal
 
@@ -11,8 +13,32 @@ export const Dashboard = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [isCalorieModalOpen, setIsCalorieModalOpen] = useState(false);
   const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
-  const { user, target, summary, meals, status } = useSelector((state: RootState) => state.dashboard);
+  const { target, summary, meals, status, history } = useSelector((state: RootState) => state.dashboard);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const d = new Date();
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
+  });
+
+  // Генерируем дни недели (3 дня до, сегодня, 3 дня после)
+  const weekDays = useMemo(() => {
+    const days = [];
+    for (let i = -3; i <= 3; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      const tzOffset = date.getTimezoneOffset() * 60000;
+      const fullDate = new Date(date.getTime() - tzOffset).toISOString().split('T')[0];
+      days.push({
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayNumber: date.getDate(),
+        isToday: i === 0,
+        fullDate
+      });
+    }
+    return days;
+  }, []);
+
   
 // Функция для сопоставления полного имени из БД с коротким списком
   const getGoalValue = (name?: string) => {
@@ -24,6 +50,7 @@ export const Dashboard = () => {
 
   useEffect(() => {
     dispatch(fetchUserData());
+    dispatch(fetchHistory());
   }, [dispatch]);
 
   if (status === 'idle' || status === 'loading') {
@@ -36,11 +63,28 @@ export const Dashboard = () => {
     );
   }
 
+  const todayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  const isTodaySelected = selectedDate === todayStr;
+
+  let displaySummary = summary;
+  let displayMeals = meals;
+
+  if (!isTodaySelected) {
+    const historyDay = history.find(h => h.date === selectedDate);
+    if (historyDay) {
+      displaySummary = historyDay;
+      displayMeals = historyDay.meals || [];
+    } else {
+      displaySummary = { ...summary, totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 };
+      displayMeals = [];
+    }
+  }
+
   // Задаем правильный порядок вывода категорий
   const categoryOrder = ['Завтрак', 'Обед', 'Ужин', 'Перекус днем', 'Перекус вечером', 'Перекус'];
 
   // Группируем съеденную еду по типу
-  const groupedMeals = meals.reduce((acc, meal) => {
+  const groupedMeals = displayMeals.reduce((acc, meal) => {
     const type = meal.type || 'Перекус';
     if (!acc[type]) acc[type] = { items: [], totals: { calories: 0, protein: 0, fat: 0, carbs: 0 } };
     acc[type].items.push(meal);
@@ -49,7 +93,7 @@ export const Dashboard = () => {
     acc[type].totals.fat += meal.fat;
     acc[type].totals.carbs += meal.carbs;
     return acc;
-  }, {} as Record<string, { items: typeof meals, totals: any }>);
+  }, {} as Record<string, { items: typeof displayMeals, totals: any }>);
 
   // Функция для открытия/закрытия аккордеона
   const toggleCategory = (category: string) => {
@@ -61,12 +105,22 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="p-8 w-full max-w-6xl mx-auto flex flex-col gap-8">
+    <div className="p-4 md:p-8 w-full max-w-6xl mx-auto flex flex-col gap-4 md:gap-8 pb-8">
       
       {/* Шапка */}
       <header className="mb-2">
-        <h1 className="text-3xl font-bold text-white mb-2">Привет, {user.name || 'Спортсмен'}! 👋</h1>
-        <div className="text-slate-400 flex items-center gap-2">
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
+            {isTodaySelected ? 'Сегодня' : new Date(selectedDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+          </h1>
+          {isTodaySelected && (
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+            </div>
+          )}
+        </div>
+        <div className="text-slate-400 flex flex-col sm:flex-row sm:items-center gap-2 text-sm md:text-base">
           Твоя цель: 
           
           {/* Кастомный Dropdown */}
@@ -74,7 +128,7 @@ export const Dashboard = () => {
             {/* Кнопка-триггер */}
             <button 
               onClick={() => setIsGoalMenuOpen(!isGoalMenuOpen)}
-              className="flex items-center gap-1.5 text-teal-400 font-semibold px-3 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg cursor-pointer transition-colors outline-none"
+              className="flex items-center gap-1.5 text-teal-400 font-semibold px-3 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg cursor-pointer transition-colors outline-none w-fit"
             >
               {getGoalValue(target.name)}
               <ChevronDown size={14} className={`transition-transform duration-200 ${isGoalMenuOpen ? 'rotate-180' : ''}`} />
@@ -119,70 +173,97 @@ export const Dashboard = () => {
         </div>
       </header>
 
+      {/* Выбор дня недели */}
+      <div className="flex justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-4 w-full mb-2">
+        {weekDays.map((day, idx) => (
+          <button 
+            key={idx}
+            onClick={() => setSelectedDate(day.fullDate)}
+            className={`flex-1 md:flex-none md:w-16 flex flex-col items-center justify-center aspect-square md:aspect-auto md:h-16 rounded-xl md:rounded-2xl transition-all ${selectedDate === day.fullDate ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30' : 'bg-[#1E2128] text-slate-400 hover:bg-slate-800 border border-slate-800'}`}
+          >
+            <span className="text-[10px] md:text-xs font-medium uppercase">{day.dayName}</span>
+            <span className={`text-sm sm:text-base md:text-lg font-bold ${day.isToday ? 'text-white' : 'text-slate-200'}`}>{day.dayNumber}</span>
+          </button>
+        ))}
+      </div>
+
+
       {/* Карточки КБЖУ */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {/* Калории */}
         <div onClick={() => setIsCalorieModalOpen(true)}
-          className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/50 transition-all group relative">
-          <div className="absolute top-4 right-4 text-xs font-medium text-teal-500/0 group-hover:text-teal-500/80 transition-colors">
+          className="bg-[#1E2128] p-4 md:p-6 rounded-2xl border border-slate-800 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/50 transition-all group relative">
+          <div className="absolute top-3 right-3 text-[10px] md:text-xs font-medium text-teal-500/0 group-hover:text-teal-500/80 transition-colors">
             Изменить
           </div>
-          <h3 className="text-slate-400 text-sm font-medium mb-4">Калории</h3>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-bold text-white">{summary.totalCalories}</span>
-            <span className="text-slate-500 mb-1">/ {target.calories} ккал</span>
+          <h3 className="text-slate-400 text-xs md:text-sm font-medium mb-2 md:mb-4">Калории</h3>
+          <div className="flex flex-col md:flex-row md:items-end gap-1 md:gap-2 mb-2">
+            <span className="text-xl md:text-3xl font-bold text-white leading-none">{displaySummary.totalCalories}</span>
+            <span className="text-slate-500 text-xs md:text-base md:mb-1">/ {target.calories} ккал</span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-2">
+          <div className="w-full bg-slate-800 rounded-full h-1.5 md:h-2">
             <div 
-              className="bg-teal-500 h-2 rounded-full transition-all duration-500" 
+              className="bg-teal-500 h-1.5 md:h-2 rounded-full transition-all duration-500" 
               style={{ width: `${Math.min((summary.totalCalories / target.calories) * 100, 100)}%` }}
             ></div>
           </div>
         </div>
 
         {/* Белки */}
-        <div className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
-          <h3 className="text-slate-400 text-sm font-medium mb-4">Белки</h3>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-bold text-blue-400">{summary.totalProtein}</span>
-            <span className="text-slate-500 mb-1">/ {target.protein} г</span>
+        <div className="bg-[#1E2128] p-4 md:p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-slate-400 text-xs md:text-sm font-medium mb-2 md:mb-4">Белки</h3>
+          <div className="flex flex-col md:flex-row md:items-end gap-1 md:gap-2 mb-2">
+            <span className="text-xl md:text-3xl font-bold text-blue-400 leading-none">{displaySummary.totalProtein}</span>
+            <span className="text-slate-500 text-xs md:text-base md:mb-1">/ {target.protein} г</span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-2">
+          <div className="w-full bg-slate-800 rounded-full h-1.5 md:h-2">
             <div 
-              className="bg-blue-400 h-2 rounded-full transition-all duration-500" 
+              className="bg-blue-400 h-1.5 md:h-2 rounded-full transition-all duration-500" 
               style={{ width: `${Math.min((summary.totalProtein / target.protein) * 100, 100)}%` }}
             ></div>
           </div>
         </div>
 
         {/* Жиры */}
-        <div className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
-          <h3 className="text-slate-400 text-sm font-medium mb-4">Жиры</h3>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-bold text-yellow-400">{summary.totalFat}</span>
-            <span className="text-slate-500 mb-1">/ {target.fat} г</span>
+        <div className="bg-[#1E2128] p-4 md:p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-slate-400 text-xs md:text-sm font-medium mb-2 md:mb-4">Жиры</h3>
+          <div className="flex flex-col md:flex-row md:items-end gap-1 md:gap-2 mb-2">
+            <span className="text-xl md:text-3xl font-bold text-yellow-400 leading-none">{displaySummary.totalFat}</span>
+            <span className="text-slate-500 text-xs md:text-base md:mb-1">/ {target.fat} г</span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-2">
+          <div className="w-full bg-slate-800 rounded-full h-1.5 md:h-2">
             <div 
-              className="bg-yellow-400 h-2 rounded-full transition-all duration-500" 
+              className="bg-yellow-400 h-1.5 md:h-2 rounded-full transition-all duration-500" 
               style={{ width: `${Math.min((summary.totalFat / target.fat) * 100, 100)}%` }}
             ></div>
           </div>
         </div>
 
         {/* Углеводы */}
-        <div className="bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
-          <h3 className="text-slate-400 text-sm font-medium mb-4">Углеводы</h3>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-bold text-purple-400">{summary.totalCarbs}</span>
-            <span className="text-slate-500 mb-1">/ {target.carbs} г</span>
+        <div className="bg-[#1E2128] p-4 md:p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-slate-400 text-xs md:text-sm font-medium mb-2 md:mb-4">Углеводы</h3>
+          <div className="flex flex-col md:flex-row md:items-end gap-1 md:gap-2 mb-2">
+            <span className="text-xl md:text-3xl font-bold text-purple-400 leading-none">{displaySummary.totalCarbs}</span>
+            <span className="text-slate-500 text-xs md:text-base md:mb-1">/ {target.carbs} г</span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-2">
+          <div className="w-full bg-slate-800 rounded-full h-1.5 md:h-2">
             <div 
-              className="bg-purple-400 h-2 rounded-full transition-all duration-500" 
+              className="bg-purple-400 h-1.5 md:h-2 rounded-full transition-all duration-500" 
               style={{ width: `${Math.min((summary.totalCarbs / target.carbs) * 100, 100)}%` }}
             ></div>
           </div>
+        </div>
+      </div>
+
+      {/* Графики и Инфографика */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
+        {/* Основной график (занимает 2 колонки) */}
+        <div className="lg:col-span-2 bg-[#1E2128] p-6 rounded-2xl border border-slate-800">
+          <MainChart />
+        </div>
+        {/* Донут чарт БЖУ (занимает 1 колонку) */}
+        <div className="lg:col-span-1">
+          <MacroDonutChart summaryData={displaySummary} />
         </div>
       </div>
 

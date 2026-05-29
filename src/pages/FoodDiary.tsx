@@ -87,10 +87,10 @@ export const FoodDiary = () => {
   };
 
   return (
-    <div className="p-8 w-full max-w-6xl mx-auto flex flex-col gap-8 animate-in fade-in duration-300 relative">
+    <div className="p-4 md:p-8 w-full max-w-6xl mx-auto flex flex-col gap-4 md:gap-8 animate-in fade-in duration-300 relative pb-8">
       <header>
-        <h1 className="text-3xl font-bold text-white mb-2">Дневник Питания 🥗</h1>
-        <p className="text-slate-400">Твоя база продуктов. Выбери еду или отредактируй состав.</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Дневник Питания 🥗</h1>
+        <p className="text-slate-400 text-sm md:text-base">Твоя база продуктов. Выбери еду или отредактируй состав.</p>
       </header>
 
       {/* Поиск */}
@@ -105,12 +105,12 @@ export const FoodDiary = () => {
         />
       </div>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4 md:gap-8">
         {Object.keys(groupedProducts).map(category => (
-          <div key={category} className="bg-[#1E2128] rounded-2xl border border-slate-800 p-6">
-            <h2 className="text-xl font-bold text-teal-400 mb-4">{category}</h2>
+          <div key={category} className="bg-[#1E2128] rounded-2xl border border-slate-800 p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-teal-400 mb-4">{category}</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {groupedProducts[category].map(product => (
                 <div 
                   key={product.id} 
@@ -118,9 +118,9 @@ export const FoodDiary = () => {
                   className="bg-[#15171C] border border-slate-800/60 p-4 rounded-xl flex items-center justify-between hover:border-teal-500/50 cursor-pointer transition-colors group"
                 >
                   <div>
-                    <h3 className="text-white font-medium mb-1 group-hover:text-teal-400 transition-colors pr-2">{product.name}</h3>
+                    <h3 className="text-white font-medium mb-1 group-hover:text-teal-400 transition-colors pr-2 text-sm md:text-base">{product.name}</h3>
                     <p className="text-xs text-slate-500 mb-2">База: {product.unit} • <span className="text-teal-500/70 font-medium">{product.calories} ккал</span></p>
-                    <div className="flex gap-3 text-xs text-slate-400">
+                    <div className="flex gap-2 md:gap-3 text-xs text-slate-400">
                       <span>Б: {product.protein}</span>
                       <span>Ж: {product.fat}</span>
                       <span>У: {product.carbs}</span>
@@ -130,12 +130,12 @@ export const FoodDiary = () => {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={(e) => handleOpenEdit(e, product)}
-                      className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800/50 text-slate-500 hover:bg-slate-700 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800/50 text-slate-500 hover:bg-slate-700 hover:text-white transition-all md:opacity-0 md:group-hover:opacity-100"
                       title="Редактировать КБЖУ"
                     >
                       <Edit2 size={16} />
                     </button>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800 text-slate-400 group-hover:bg-teal-500 group-hover:text-slate-900 transition-all">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800 text-slate-400 md:group-hover:bg-teal-500 md:group-hover:text-slate-900 transition-all">
                       <Plus size={20} />
                     </div>
                   </div>
@@ -148,8 +148,14 @@ export const FoodDiary = () => {
 
       {/* Модальное окно указания веса */}
       {selectedProduct && dynamicStats && !editingProduct && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-sm bg-[#1E2128] p-6 rounded-3xl border border-slate-800 animate-in fade-in zoom-in duration-200 shadow-2xl">
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setSelectedProduct(null)}
+        >
+          <div 
+            className="relative w-full max-w-sm bg-[#1E2128] p-6 rounded-3xl border border-slate-800 animate-in fade-in zoom-in duration-200 shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
               <X size={20} />
             </button>
@@ -194,9 +200,9 @@ export const FoodDiary = () => {
                 <span className="text-teal-400 font-bold text-xl">{dynamicStats.calories}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <div className="flex flex-col items-center"><span className="text-slate-500 text-xs mb-1">Белки</span><span className="text-blue-400 font-medium">{dynamicStats.protein}г</span></div>
-                <div className="flex flex-col items-center"><span className="text-slate-500 text-xs mb-1">Жиры</span><span className="text-yellow-400 font-medium">{dynamicStats.fat}г</span></div>
-                <div className="flex flex-col items-center"><span className="text-slate-500 text-xs mb-1">Углеводы</span><span className="text-purple-400 font-medium">{dynamicStats.carbs}г</span></div>
+                <div className="flex flex-col items-center"><span className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Белки</span><span className="text-blue-400 font-medium">{dynamicStats.protein}г</span></div>
+                <div className="flex flex-col items-center"><span className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Жиры</span><span className="text-yellow-400 font-medium">{dynamicStats.fat}г</span></div>
+                <div className="flex flex-col items-center"><span className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Углеводы</span><span className="text-purple-400 font-medium">{dynamicStats.carbs}г</span></div>
               </div>
             </div>
 
@@ -209,8 +215,14 @@ export const FoodDiary = () => {
 
       {/* Модальное окно: РЕДАКТИРОВАНИЕ ПРОДУКТА */}
       {editingProduct && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-[#1E2128] p-6 rounded-3xl border border-slate-800 animate-in fade-in zoom-in duration-200 shadow-2xl">
+        <div 
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setEditingProduct(null)}
+        >
+          <div 
+            className="relative w-full max-w-md bg-[#1E2128] p-6 rounded-3xl border border-slate-800 animate-in fade-in zoom-in duration-200 shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button onClick={() => setEditingProduct(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
               <X size={20} />
             </button>
@@ -223,26 +235,26 @@ export const FoodDiary = () => {
                   type="text" 
                   value={editForm.name} 
                   onChange={e => setEditForm({...editForm, name: e.target.value})}
-                  className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-teal-500 transition-colors text-sm"
+                  className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-teal-500 transition-colors text-[16px] md:text-sm"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Калории</label>
-                  <input type="number" value={editForm.calories} onChange={e => setEditForm({...editForm, calories: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-teal-500 transition-colors text-sm" />
+                  <input type="number" value={editForm.calories} onChange={e => setEditForm({...editForm, calories: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-teal-500 transition-colors text-[16px] md:text-sm" />
                 </div>
                 <div>
                   <label className="text-xs text-blue-400/70 mb-1.5 block">Белки (г)</label>
-                  <input type="number" value={editForm.protein} onChange={e => setEditForm({...editForm, protein: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 transition-colors text-sm" />
+                  <input type="number" value={editForm.protein} onChange={e => setEditForm({...editForm, protein: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 transition-colors text-[16px] md:text-sm" />
                 </div>
                 <div>
                   <label className="text-xs text-yellow-400/70 mb-1.5 block">Жиры (г)</label>
-                  <input type="number" value={editForm.fat} onChange={e => setEditForm({...editForm, fat: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-yellow-500 transition-colors text-sm" />
+                  <input type="number" value={editForm.fat} onChange={e => setEditForm({...editForm, fat: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-yellow-500 transition-colors text-[16px] md:text-sm" />
                 </div>
                 <div>
                   <label className="text-xs text-purple-400/70 mb-1.5 block">Углеводы (г)</label>
-                  <input type="number" value={editForm.carbs} onChange={e => setEditForm({...editForm, carbs: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-purple-500 transition-colors text-sm" />
+                  <input type="number" value={editForm.carbs} onChange={e => setEditForm({...editForm, carbs: Number(e.target.value)})} className="w-full bg-[#15171C] border border-slate-800 text-white rounded-xl px-4 py-2.5 outline-none focus:border-purple-500 transition-colors text-[16px] md:text-sm" />
                 </div>
               </div>
             </div>

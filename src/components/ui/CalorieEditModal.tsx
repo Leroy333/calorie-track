@@ -26,8 +26,14 @@ export const CalorieEditModal = ({ onClose }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-sm bg-[#1E2128] p-6 rounded-3xl border border-slate-800 animate-in fade-in zoom-in duration-200 shadow-2xl">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-sm bg-[#1E2128] p-6 rounded-3xl border border-slate-800 animate-in fade-in zoom-in duration-200 shadow-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
           <X size={20} />
         </button>

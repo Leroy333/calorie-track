@@ -1,6 +1,6 @@
 import { Bell, Search } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../../store/dashboardSlice';
+import type { RootState } from '../../store';
 
 export const Header = () => {
   const user = useSelector((state: RootState) => state.dashboard.user);
@@ -9,7 +9,7 @@ export const Header = () => {
   return (
     <header className="flex justify-between items-center mb-8">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-1">Привет, {user.name}!</h1>
+        <h1 className="text-2xl font-bold text-white mb-1">Сегодня</h1>
         <p className="text-slate-400 text-sm capitalize">{date}</p>
       </div>
       <div className="flex items-center gap-6">

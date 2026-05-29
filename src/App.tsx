@@ -9,9 +9,9 @@ import { Calendar } from './pages/Calendar';
 export const App = () => {
   return (
     <Router>
-      <div className="flex h-screen bg-[#0F1115]">
+      <div className="flex h-screen bg-[#0F1115] pb-20 md:pb-0">
         <Sidebar />
-        <main className="flex-1 ml-64 overflow-y-auto">
+        <main className="flex-1 w-full md:ml-64 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/diary" element={<FoodDiary />} />
