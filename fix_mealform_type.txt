@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMeal, fetchProducts } from '../../store/dashboardSlice';
 import type { AppDispatch, RootState } from '../../store';
@@ -30,27 +30,8 @@ export const MealForm = ({ onClose, targetDate }: MealFormProps) => {
     carbs: ''
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    return products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [products, searchTerm]);
-
   const groupedProducts = useMemo(() => {
-    return filteredProducts.reduce((acc, product) => {
+    return products.reduce((acc, product) => {
       const cat = product.category || 'Без категории';
       if (!acc[cat]) {
         acc[cat] = [];
@@ -58,24 +39,7 @@ export const MealForm = ({ onClose, targetDate }: MealFormProps) => {
       acc[cat].push(product);
       return acc;
     }, {} as Record<string, typeof products>);
-  }, [filteredProducts]);
-
-  const handleProductSelect = (product: Product) => {
-    setSelectedProduct(product);
-    const defaultAmt = (product.unit && product.unit.includes('100')) ? '100' : '1';
-    setAmount(defaultAmt);
-    setSearchTerm(product.name);
-    setIsDropdownOpen(false);
-    
-    setFormData({
-      ...formData,
-      name: product.name,
-      calories: String(product.calories),
-      protein: String(product.protein),
-      fat: String(product.fat),
-      carbs: String(product.carbs),
-    });
-  };
+  }, [products]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,66 +56,46 @@ export const MealForm = ({ onClose, targetDate }: MealFormProps) => {
 
     setFormData({ name: '', type: 'Перекус', calories: '', protein: '', fat: '', carbs: '' });
     setSelectedProduct(null);
-    setSearchTerm('');
     setAmount('');
     onClose();
   };
 
   return (
-    <Card className="flex flex-col gap-4 overflow-visible">
+    <Card className="flex flex-col gap-4">
       <h3 className="text-lg font-semibold text-white">Добавить прием пищи</h3>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         
-        <div className="relative" ref={dropdownRef}>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Поиск по дневнику..."
-              className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500 w-full pr-10"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setIsDropdownOpen(true);
-              }}
-              onFocus={() => setIsDropdownOpen(true)}
-            />
-            {searchTerm && (
-              <button 
-                type="button" 
-                onClick={() => { setSearchTerm(''); setIsDropdownOpen(true); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {isDropdownOpen && (
-            <div className="absolute z-50 w-full mt-1 bg-[#1E2128] border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-              {Object.keys(groupedProducts).length === 0 ? (
-                <div className="p-3 text-sm text-slate-400 text-center">Ничего не найдено</div>
-              ) : (
-                Object.entries(groupedProducts).map(([category, prods]) => (
-                  <div key={category}>
-                    <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 bg-slate-800/50 sticky top-0 uppercase tracking-wider backdrop-blur-md">
-                      {category}
-                    </div>
-                    {prods.map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-teal-500/20 hover:text-teal-400 transition-colors"
-                        onClick={() => handleProductSelect(p)}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
+        <select
+          className="bg-[#1E2128] text-white text-sm rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-teal-500 w-full"
+          onChange={(e) => {
+            const selectedId = Number(e.target.value);
+            const product = products.find(p => p.id === selectedId);
+            if (product) {
+              setSelectedProduct(product);
+              const defaultAmt = (product.unit && product.unit.includes('100')) ? '100' : '1';
+              setAmount(defaultAmt);
+              
+              setFormData({
+                ...formData,
+                name: product.name,
+                calories: String(product.calories),
+                protein: String(product.protein),
+                fat: String(product.fat),
+                carbs: String(product.carbs),
+              });
+            }
+          }}
+          defaultValue=""
+        >
+          <option value="" disabled>Выбрать из дневника...</option>
+          {Object.entries(groupedProducts).map(([category, prods]) => (
+            <optgroup key={category} label={category}>
+              {prods.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
 
         <div className="flex items-center gap-2 my-1">
           <div className="h-px bg-slate-800 flex-1"></div>

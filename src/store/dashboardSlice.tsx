@@ -156,13 +156,21 @@ const dashboardSlice = createSlice({
       })
       // Обработка успешного добавления еды
       .addCase(addMeal.fulfilled, (state, action) => {
-        const updatedSummary = action.payload;
-        // Бэкенд возвращает обновленную сводку (summary) вместе с новым массивом meals
-        state.summary.totalCalories = updatedSummary.totalCalories;
-        state.summary.totalProtein = updatedSummary.totalProtein;
-        state.summary.totalFat = updatedSummary.totalFat;
-        state.summary.totalCarbs = updatedSummary.totalCarbs;
-        state.meals = updatedSummary.meals || [];
+        const data = action.payload;
+        if (data.summaries && data.summaries.length > 0) {
+          const todaySummary = data.summaries[0];
+          state.summary = {
+            totalCalories: todaySummary.totalCalories,
+            totalProtein: todaySummary.totalProtein,
+            totalFat: todaySummary.totalFat,
+            totalCarbs: todaySummary.totalCarbs,
+            deviationCalories: todaySummary.deviationCalories || 0,
+            deviationProtein: todaySummary.deviationProtein || 0,
+            deviationFat: todaySummary.deviationFat || 0,
+            deviationCarbs: todaySummary.deviationCarbs || 0,
+          };
+          state.meals = todaySummary.meals || [];
+        }
       })
       .addCase(updateTargetCalories.fulfilled, (state, action) => {
         // Бэкенд возвращает обновленную цель, берем из нее новые калории

@@ -6,12 +6,14 @@ import { useState, useMemo } from 'react';
 import { CalorieEditModal } from '../components/ui/CalorieEditModal';
 import { MainChart } from '../components/charts/MainChart';
 import { MacroDonutChart } from '../components/charts/MacroDonutChart';
-import { ChevronDown, Trash2 } from 'lucide-react'; // Добавили Trash2
+import { ChevronDown, Trash2, Plus, X } from 'lucide-react';
+import { MealForm } from '../components/ui/MealForm'; // Добавили Trash2
 import { removeMeal } from '../store/dashboardSlice'; // Добавили removeMeal
 
 export const Dashboard = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [isCalorieModalOpen, setIsCalorieModalOpen] = useState(false);
+  const [isMealFormOpen, setIsMealFormOpen] = useState(false);
   const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
   const { target, summary, meals, status, history } = useSelector((state: RootState) => state.dashboard);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -268,7 +270,17 @@ export const Dashboard = () => {
       </div>
 
       {/* Список съеденного (Сгруппированный) */}
-        <div className="flex flex-col gap-4 mt-4">
+        <div className="flex items-center justify-between mt-4">
+        <h2 className="text-xl font-bold text-white">Список съеденного</h2>
+        <button
+          onClick={() => setIsMealFormOpen(true)}
+          className="flex items-center gap-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 px-4 py-2 rounded-xl transition-colors text-sm font-medium"
+        >
+          <Plus size={16} />
+          Добавить
+        </button>
+      </div>
+      <div className="flex flex-col gap-4 mt-0">
           {Object.keys(groupedMeals).length === 0 ? (
             <div className="text-slate-500 text-center py-10">Ты пока ничего не добавил. Самое время перекусить!</div>
           ) : (
@@ -345,6 +357,26 @@ export const Dashboard = () => {
           )}
         </div>
       {/* Модальное окно редактирования калорий */}
+      {isMealFormOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setIsMealFormOpen(false)}
+        >
+          <div 
+            className="relative w-full max-w-md animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setIsMealFormOpen(false)}
+              className="absolute -top-10 right-0 text-slate-400 hover:text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <MealForm onClose={() => setIsMealFormOpen(false)} targetDate={selectedDate} />
+          </div>
+        </div>
+      )}
+
       {isCalorieModalOpen && (
         <CalorieEditModal onClose={() => setIsCalorieModalOpen(false)} />
       )}   
