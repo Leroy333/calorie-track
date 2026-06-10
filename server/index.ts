@@ -41,7 +41,7 @@ app.get('/api/user/stats', async (req, res) => {
 
 // POST: Добавление приема пищи (с поддержкой прошлых дней)
 app.post('/api/meals', async (req, res) => {
-  const { name, type, calories, protein, fat, carbs, targetDate } = req.body;
+  const { name, type, calories, protein, fat, carbs, targetDate, productId } = req.body;
   
   // Железобетонно чистим дату (если вдруг прилетел формат с временем)
   const cleanTargetDate = targetDate ? targetDate.split('T')[0] : null;
@@ -82,6 +82,10 @@ app.post('/api/meals', async (req, res) => {
         totalCarbs: { increment: carbs },
       }
     });
+
+    if (productId) {
+      await prisma.product.update({ where: { id: parseInt(productId) }, data: { recent: true } }).catch(e => console.error(e));
+    }
 
     const updatedUser = await prisma.user.findFirst({
       include: {

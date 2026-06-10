@@ -41,7 +41,7 @@ export const MacroDonutChart = ({ summaryData }: { summaryData?: any }) => {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1E2128', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value: number) => [`${value} г`, '']}
+                formatter={(value: any) => [`${value} г`, '']}
               />
             )}
             <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />

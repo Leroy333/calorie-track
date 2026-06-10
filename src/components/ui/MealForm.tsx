@@ -45,8 +45,8 @@ export const MealForm = ({ onClose, targetDate }: MealFormProps) => {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    return products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const query = searchTerm.trim(); if (!query) return products.slice(0, 100); if (query.length < 2) return [];
+    return products.filter(p => p.name.toLowerCase().includes(query.toLowerCase())).slice(0, 100);
   }, [products, searchTerm]);
 
   const groupedProducts = useMemo(() => {

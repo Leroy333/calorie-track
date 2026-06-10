@@ -9,6 +9,7 @@ export const FoodDiary = () => {
   const products = useSelector((state: RootState) => state.dashboard.products);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [isYarcheView, setIsYarcheView] = useState(false);
   
   // Стейт для добавления продукта
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -28,16 +29,13 @@ export const FoodDiary = () => {
   const escapedQuery = searchQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const searchRegex = new RegExp(`(^|[^а-яА-ЯёЁa-zA-Z0-9])` + escapedQuery, 'i');
 
-  const filteredProducts = products.filter(p => {
-    if (!searchQuery.trim()) return true;
-    return searchRegex.test(p.name) || searchRegex.test(p.category);
-  });
+  const isYarcheProduct = (p: any) => p.category.startsWith('ЯРЧЕ - ');
 
-  const groupedProducts = filteredProducts.reduce((acc, product) => {
-    if (!acc[product.category]) acc[product.category] = [];
-    acc[product.category].push(product);
-    return acc;
-  }, {} as Record<string, typeof products>);
+  const filteredProductsRaw = products.filter(p => { if (isYarcheView) { if (!isYarcheProduct(p) && !p.recent) return false; } else { if (isYarcheProduct(p) && !p.recent) return false; } const query = searchQuery.trim(); if (!query) return true; if (query.length < 2) return true; return searchRegex.test(p.name) || searchRegex.test(p.category); });
+
+  const filteredProducts = isYarcheView && !searchQuery.trim() ? filteredProductsRaw.slice(0, 150) : filteredProductsRaw;
+
+  const groupedProducts = filteredProducts.reduce((acc, product) => { let cat = product.category; if (cat.startsWith('ЯРЧЕ - ')) { cat = cat.replace('ЯРЧЕ - ', ''); } if (product.recent) { if (!acc['Недавнее']) acc['Недавнее'] = []; acc['Недавнее'].push(product); if (!acc[cat]) acc[cat] = []; acc[cat].push(product); } else { if (!acc[cat]) acc[cat] = []; acc[cat].push(product); } return acc; }, {} as Record<string, typeof products>); const categoryKeys = Object.keys(groupedProducts).sort((a, b) => { if (a === 'Недавнее') return -1; if (b === 'Недавнее') return 1; return a.localeCompare(b); });
 
   const handleOpenModal = (product: any) => {
     setSelectedProduct(product);
@@ -81,16 +79,25 @@ export const FoodDiary = () => {
       calories: dynamicStats!.calories,
       protein: dynamicStats!.protein,
       fat: dynamicStats!.fat,
-      carbs: dynamicStats!.carbs
+      carbs: dynamicStats!.carbs,
+      productId: selectedProduct.id
     }));
     setSelectedProduct(null);
   };
 
   return (
     <div className="p-4 md:p-8 w-full max-w-6xl mx-auto flex flex-col gap-4 md:gap-8 animate-in fade-in duration-300 relative pb-8">
-      <header>
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Дневник Питания 🥗</h1>
-        <p className="text-slate-400 text-sm md:text-base">Твоя база продуктов. Выбери еду или отредактируй состав.</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{isYarcheView ? 'ЯРЧЕ 🛒' : 'Дневник Питания 🥗'}</h1>
+          <p className="text-slate-400 text-sm md:text-base">{isYarcheView ? 'Каталог продуктов магазина ЯРЧЕ.' : 'Твоя база продуктов. Выбери еду или отредактируй состав.'}</p>
+        </div>
+        <button
+          onClick={() => setIsYarcheView(!isYarcheView)}
+          className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold rounded-xl transition-all active:scale-95 whitespace-nowrap"
+        >
+          {isYarcheView ? 'В Дневник' : 'Каталог ЯРЧЕ'}
+        </button>
       </header>
 
       {/* Поиск */}
@@ -106,14 +113,14 @@ export const FoodDiary = () => {
       </div>
 
       <div className="flex flex-col gap-4 md:gap-8">
-        {Object.keys(groupedProducts).map(category => (
+        {categoryKeys.map(category => (
           <div key={category} className="bg-[#1E2128] rounded-2xl border border-slate-800 p-4 md:p-6">
             <h2 className="text-lg md:text-xl font-bold text-teal-400 mb-4">{category}</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {groupedProducts[category].map(product => (
                 <div 
-                  key={product.id} 
+                  key={category + '-' + product.id} 
                   onClick={() => handleOpenModal(product)}
                   className="bg-[#15171C] border border-slate-800/60 p-4 rounded-xl flex items-center justify-between hover:border-teal-500/50 cursor-pointer transition-colors group"
                 >

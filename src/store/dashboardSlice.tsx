@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+﻿import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 export interface Meal {
   id: number;
@@ -8,6 +8,7 @@ export interface Meal {
   protein: number;
   fat: number;
   carbs: number;
+  recent: boolean;
 }
 
 export interface Product {
@@ -19,6 +20,7 @@ export interface Product {
   protein: number;
   fat: number;
   carbs: number;
+  recent: boolean;
 }
 
 interface DashboardState {
@@ -53,40 +55,40 @@ const initialState: DashboardState = {
   history: []
 };
 
-// Запрашиваем данные при загрузке
-// Запрашиваем данные при загрузке
+// Р—Р°РїСЂР°С€РёРІР°РµРј РґР°РЅРЅС‹Рµ РїСЂРё Р·Р°РіСЂСѓР·РєРµ
+// Р—Р°РїСЂР°С€РёРІР°РµРј РґР°РЅРЅС‹Рµ РїСЂРё Р·Р°РіСЂСѓР·РєРµ
 export const fetchUserData = createAsyncThunk(
   'dashboard/fetchUserData',
   async () => {
-    const response = await fetch('http://localhost:5001/api/user/stats'); // 👈 меняем здесь
-    if (!response.ok) throw new Error('Ошибка сервера');
+    const response = await fetch('http://localhost:5001/api/user/stats'); // рџ‘€ РјРµРЅСЏРµРј Р·РґРµСЃСЊ
+    if (!response.ok) throw new Error('РћС€РёР±РєР° СЃРµСЂРІРµСЂР°');
     return response.json();
   }
 );
 
-// Запрашиваем справочник продуктов
+// Р—Р°РїСЂР°С€РёРІР°РµРј СЃРїСЂР°РІРѕС‡РЅРёРє РїСЂРѕРґСѓРєС‚РѕРІ
 export const fetchProducts = createAsyncThunk(
   'dashboard/fetchProducts',
   async () => {
     const response = await fetch('http://localhost:5001/api/products');
-    if (!response.ok) throw new Error('Ошибка сервера');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° СЃРµСЂРІРµСЂР°');
     return response.json();
   }
 );
 
-// Добавление приема пищи
+// Р”РѕР±Р°РІР»РµРЅРёРµ РїСЂРёРµРјР° РїРёС‰Рё
 export const addMeal = createAsyncThunk(
   'dashboard/addMeal',
-  // Убедись, что здесь есть targetDate?: string
-  async (meal: { name: string; type: string; calories: number; protein: number; fat: number; carbs: number; targetDate?: string }, { dispatch }) => {
+  // РЈР±РµРґРёСЃСЊ, С‡С‚Рѕ Р·РґРµСЃСЊ РµСЃС‚СЊ targetDate?: string
+  async (meal: { name: string; type: string; calories: number; protein: number; fat: number; carbs: number; targetDate?: string; productId?: number }, { dispatch }) => {
     const response = await fetch('http://localhost:5001/api/meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(meal), // Здесь targetDate улетает на бэкенд
+      body: JSON.stringify(meal), // Р—РґРµСЃСЊ targetDate СѓР»РµС‚Р°РµС‚ РЅР° Р±СЌРєРµРЅРґ
     });
-    if (!response.ok) throw new Error('Ошибка сервера');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° СЃРµСЂРІРµСЂР°');
     
-    // Перезапрашиваем историю, чтобы карточка обновилась
+    // РџРµСЂРµР·Р°РїСЂР°С€РёРІР°РµРј РёСЃС‚РѕСЂРёСЋ, С‡С‚РѕР±С‹ РєР°СЂС‚РѕС‡РєР° РѕР±РЅРѕРІРёР»Р°СЃСЊ
     dispatch(fetchHistory());
     
     return response.json();
@@ -119,11 +121,11 @@ const dashboardSlice = createSlice({
         state.status = 'succeeded';
         const data = action.payload;
         
-        // 1. Имя и аватар
+        // 1. РРјСЏ Рё Р°РІР°С‚Р°СЂ
         state.user.name = data.name;
         state.user.avatar = data.avatar || '';
 
-        // 2. Достаем активную цель (если она есть)
+        // 2. Р”РѕСЃС‚Р°РµРј Р°РєС‚РёРІРЅСѓСЋ С†РµР»СЊ (РµСЃР»Рё РѕРЅР° РµСЃС‚СЊ)
         if (data.goals && data.goals.length > 0) {
           const activeGoal = data.goals[0];
           state.target = {
@@ -135,7 +137,7 @@ const dashboardSlice = createSlice({
           };
         }
 
-        // 3. Достаем сводку за сегодня и список еды
+        // 3. Р”РѕСЃС‚Р°РµРј СЃРІРѕРґРєСѓ Р·Р° СЃРµРіРѕРґРЅСЏ Рё СЃРїРёСЃРѕРє РµРґС‹
         if (data.summaries && data.summaries.length > 0) {
           const todaySummary = data.summaries[0];
           state.summary = {
@@ -154,7 +156,7 @@ const dashboardSlice = createSlice({
       .addCase(fetchUserData.rejected, (state) => {
         state.status = 'failed';
       })
-      // Обработка успешного добавления еды
+      // РћР±СЂР°Р±РѕС‚РєР° СѓСЃРїРµС€РЅРѕРіРѕ РґРѕР±Р°РІР»РµРЅРёСЏ РµРґС‹
       .addCase(addMeal.fulfilled, (state, action) => {
         const data = action.payload;
         if (data.summaries && data.summaries.length > 0) {
@@ -173,7 +175,7 @@ const dashboardSlice = createSlice({
         }
       })
       .addCase(updateTargetCalories.fulfilled, (state, action) => {
-        // Бэкенд возвращает обновленную цель, берем из нее новые калории
+        // Р‘СЌРєРµРЅРґ РІРѕР·РІСЂР°С‰Р°РµС‚ РѕР±РЅРѕРІР»РµРЅРЅСѓСЋ С†РµР»СЊ, Р±РµСЂРµРј РёР· РЅРµРµ РЅРѕРІС‹Рµ РєР°Р»РѕСЂРёРё
         state.target.calories = action.payload.targetCalories;
       })
       .addCase(switchGoal.fulfilled, (state, action) => {
@@ -200,7 +202,7 @@ const dashboardSlice = createSlice({
             totalProtein: todaySummary.totalProtein,
             totalFat: todaySummary.totalFat,
             totalCarbs: todaySummary.totalCarbs,
-            // Добавили недостающие поля отклонений:
+            // Р”РѕР±Р°РІРёР»Рё РЅРµРґРѕСЃС‚Р°СЋС‰РёРµ РїРѕР»СЏ РѕС‚РєР»РѕРЅРµРЅРёР№:
             deviationCalories: todaySummary.deviationCalories || 0,
             deviationProtein: todaySummary.deviationProtein || 0,
             deviationFat: todaySummary.deviationFat || 0,
@@ -208,7 +210,7 @@ const dashboardSlice = createSlice({
           };
           state.meals = todaySummary.meals;
         } else {
-          // Если мы удалили последнюю еду за день, обнуляем абсолютно всё
+          // Р•СЃР»Рё РјС‹ СѓРґР°Р»РёР»Рё РїРѕСЃР»РµРґРЅСЋСЋ РµРґСѓ Р·Р° РґРµРЅСЊ, РѕР±РЅСѓР»СЏРµРј Р°Р±СЃРѕР»СЋС‚РЅРѕ РІСЃС‘
           state.summary = { 
             totalCalories: 0, 
             totalProtein: 0, 
@@ -223,7 +225,7 @@ const dashboardSlice = createSlice({
         }
       })
       .addCase(editProduct.fulfilled, (state, action) => {
-        // Находим обновленный продукт в списке и заменяем его
+        // РќР°С…РѕРґРёРј РѕР±РЅРѕРІР»РµРЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚ РІ СЃРїРёСЃРєРµ Рё Р·Р°РјРµРЅСЏРµРј РµРіРѕ
         const index = state.products.findIndex(p => p.id === action.payload.id);
         if (index !== -1) {
           state.products[index] = action.payload;
@@ -236,7 +238,7 @@ const dashboardSlice = createSlice({
   },
 });
 
-// Быстрое обновление калорий
+// Р‘С‹СЃС‚СЂРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ РєР°Р»РѕСЂРёР№
 export const updateTargetCalories = createAsyncThunk(
   'dashboard/updateTargetCalories',
   async (calories: number) => {
@@ -245,7 +247,7 @@ export const updateTargetCalories = createAsyncThunk(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ calories }),
     });
-    if (!response.ok) throw new Error('Ошибка при обновлении калорий');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё РєР°Р»РѕСЂРёР№');
     return response.json(); 
   }
 );
@@ -256,12 +258,12 @@ export const fetchHistory = createAsyncThunk(
   'dashboard/fetchHistory',
   async () => {
     const response = await fetch('http://localhost:5001/api/history');
-    if (!response.ok) throw new Error('Ошибка сервера при загрузке истории');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° СЃРµСЂРІРµСЂР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ РёСЃС‚РѕСЂРёРё');
     return response.json();
   }
 );
 
-// Переключение цели
+// РџРµСЂРµРєР»СЋС‡РµРЅРёРµ С†РµР»Рё
 export const switchGoal = createAsyncThunk(
   'dashboard/switchGoal',
   async (goalName: string) => {
@@ -270,29 +272,29 @@ export const switchGoal = createAsyncThunk(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ goalName }),
     });
-    if (!response.ok) throw new Error('Ошибка при смене цели');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° РїСЂРё СЃРјРµРЅРµ С†РµР»Рё');
     return response.json(); 
   }
 );
 
-// Удаление приема пищи
+// РЈРґР°Р»РµРЅРёРµ РїСЂРёРµРјР° РїРёС‰Рё
 export const removeMeal = createAsyncThunk(
   'dashboard/removeMeal',
-  // Добавили { dispatch } вторым аргументом
+  // Р”РѕР±Р°РІРёР»Рё { dispatch } РІС‚РѕСЂС‹Рј Р°СЂРіСѓРјРµРЅС‚РѕРј
   async (mealId: number, { dispatch }) => { 
     const response = await fetch(`http://localhost:5001/api/meals/${mealId}`, {
       method: 'DELETE',
     });
-    if (!response.ok) throw new Error('Ошибка при удалении еды');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° РїСЂРё СѓРґР°Р»РµРЅРёРё РµРґС‹');
     
-    // Обновляем Календарь, чтобы еда сразу исчезла из списка!
+    // РћР±РЅРѕРІР»СЏРµРј РљР°Р»РµРЅРґР°СЂСЊ, С‡С‚РѕР±С‹ РµРґР° СЃСЂР°Р·Сѓ РёСЃС‡РµР·Р»Р° РёР· СЃРїРёСЃРєР°!
     dispatch(fetchHistory()); 
     
     return response.json(); 
   }
 );
 
-// Редактирование приема пищи (в истории)
+// Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїСЂРёРµРјР° РїРёС‰Рё (РІ РёСЃС‚РѕСЂРёРё)
 export const editMealRecord = createAsyncThunk(
   'dashboard/editMealRecord',
   async (meal: any, { dispatch }) => {
@@ -301,16 +303,16 @@ export const editMealRecord = createAsyncThunk(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(meal),
     });
-    if (!response.ok) throw new Error('Ошибка сервера при редактировании');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° СЃРµСЂРІРµСЂР° РїСЂРё СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРё');
     
-    // После успешного сохранения обновляем все данные на экране
+    // РџРѕСЃР»Рµ СѓСЃРїРµС€РЅРѕРіРѕ СЃРѕС…СЂР°РЅРµРЅРёСЏ РѕР±РЅРѕРІР»СЏРµРј РІСЃРµ РґР°РЅРЅС‹Рµ РЅР° СЌРєСЂР°РЅРµ
     dispatch(fetchHistory());
     dispatch(fetchUserData());
     return response.json();
   }
 );
 
-// Обновление физических параметров
+// РћР±РЅРѕРІР»РµРЅРёРµ С„РёР·РёС‡РµСЃРєРёС… РїР°СЂР°РјРµС‚СЂРѕРІ
 export const updateSettings = createAsyncThunk(
   'dashboard/updateSettings',
   async (settingsData: { age: number; height: number; weight: number; gender: string; activityLevel: number }) => {
@@ -319,12 +321,12 @@ export const updateSettings = createAsyncThunk(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settingsData),
     });
-    if (!response.ok) throw new Error('Ошибка при сохранении настроек');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё РЅР°СЃС‚СЂРѕРµРє');
     return response.json(); 
   }
 );
 
-// Редактирование продукта
+// Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїСЂРѕРґСѓРєС‚Р°
 export const editProduct = createAsyncThunk(
   'dashboard/editProduct',
   async (product: any) => {
@@ -333,7 +335,7 @@ export const editProduct = createAsyncThunk(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(product),
     });
-    if (!response.ok) throw new Error('Ошибка сервера');
+    if (!response.ok) throw new Error('РћС€РёР±РєР° СЃРµСЂРІРµСЂР°');
     return response.json();
   }
 );
