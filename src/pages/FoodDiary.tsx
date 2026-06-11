@@ -9,8 +9,7 @@ export const FoodDiary = () => {
   const products = useSelector((state: RootState) => state.dashboard.products);
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [isYarcheView, setIsYarcheView] = useState(false);
-  
+    
   // Стейт для добавления продукта
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [amount, setAmount] = useState<number | ''>('');
@@ -31,9 +30,9 @@ export const FoodDiary = () => {
 
   const isYarcheProduct = (p: any) => p.category.startsWith('ЯРЧЕ - ');
 
-  const filteredProductsRaw = products.filter(p => { if (isYarcheView) { if (!isYarcheProduct(p) && !p.recent) return false; } else { if (isYarcheProduct(p) && !p.recent) return false; } const query = searchQuery.trim(); if (!query) return true; if (query.length < 2) return true; return searchRegex.test(p.name) || searchRegex.test(p.category); });
+  const filteredProductsRaw = products.filter(p => { const query = searchQuery.trim(); if (!query) return true; if (query.length < 2) return true; return searchRegex.test(p.name) || searchRegex.test(p.category); });
 
-  const filteredProducts = isYarcheView && !searchQuery.trim() ? filteredProductsRaw.slice(0, 150) : filteredProductsRaw;
+  const filteredProducts = filteredProductsRaw.slice(0, 300);
 
   const groupedProducts = filteredProducts.reduce((acc, product) => { let cat = product.category; if (cat.startsWith('ЯРЧЕ - ')) { cat = cat.replace('ЯРЧЕ - ', ''); } if (product.recent) { if (!acc['Недавнее']) acc['Недавнее'] = []; acc['Недавнее'].push(product); if (!acc[cat]) acc[cat] = []; acc[cat].push(product); } else { if (!acc[cat]) acc[cat] = []; acc[cat].push(product); } return acc; }, {} as Record<string, typeof products>); const categoryKeys = Object.keys(groupedProducts).sort((a, b) => { if (a === 'Недавнее') return -1; if (b === 'Недавнее') return 1; return a.localeCompare(b); });
 
@@ -89,15 +88,10 @@ export const FoodDiary = () => {
     <div className="p-4 md:p-8 w-full max-w-6xl mx-auto flex flex-col gap-4 md:gap-8 animate-in fade-in duration-300 relative pb-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{isYarcheView ? 'ЯРЧЕ 🛒' : 'Дневник Питания 🥗'}</h1>
-          <p className="text-slate-400 text-sm md:text-base">{isYarcheView ? 'Каталог продуктов магазина ЯРЧЕ.' : 'Твоя база продуктов. Выбери еду или отредактируй состав.'}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Дневник Питания 🥗</h1>
+          <p className="text-slate-400 text-sm md:text-base">Твоя база продуктов. Выбери еду или отредактируй состав.</p>
         </div>
-        <button
-          onClick={() => setIsYarcheView(!isYarcheView)}
-          className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold rounded-xl transition-all active:scale-95 whitespace-nowrap"
-        >
-          {isYarcheView ? 'В Дневник' : 'Каталог ЯРЧЕ'}
-        </button>
+        
       </header>
 
       {/* Поиск */}
@@ -122,10 +116,17 @@ export const FoodDiary = () => {
                 <div 
                   key={category + '-' + product.id} 
                   onClick={() => handleOpenModal(product)}
-                  className="bg-[#15171C] border border-slate-800/60 p-4 rounded-xl flex items-center justify-between hover:border-teal-500/50 cursor-pointer transition-colors group"
+                  className="bg-[#15171C] border border-slate-800/60 p-4 rounded-xl flex items-center justify-between hover:border-teal-500/50 cursor-pointer transition-colors group relative"
                 >
-                  <div>
-                    <h3 className="text-white font-medium mb-1 group-hover:text-teal-400 transition-colors pr-2 text-sm md:text-base">{product.name}</h3>
+                                    {isYarcheProduct(product) && (
+                    <div className="absolute top-0 right-0 bg-orange-500/10 text-orange-500 border-l border-b border-orange-500/20 text-[9px] font-bold px-2 py-0.5 rounded-tr-xl rounded-bl-lg uppercase tracking-wider whitespace-nowrap">
+                      Ярче
+                    </div>
+                  )}
+<div className="flex-1 pr-4">
+                    <div className="mb-1">
+                      <h3 className="text-white font-medium group-hover:text-teal-400 transition-colors pr-2 text-sm md:text-base leading-tight">{product.name}</h3>
+                    </div>
                     <p className="text-xs text-slate-500 mb-2">База: {product.unit} • <span className="text-teal-500/70 font-medium">{product.calories} ккал</span></p>
                     <div className="flex gap-2 md:gap-3 text-xs text-slate-400">
                       <span>Б: {product.protein}</span>
@@ -134,7 +135,7 @@ export const FoodDiary = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button 
                       onClick={(e) => handleOpenEdit(e, product)}
                       className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800/50 text-slate-500 hover:bg-slate-700 hover:text-white transition-all md:opacity-0 md:group-hover:opacity-100"
